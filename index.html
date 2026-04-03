@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CS 184 final project proposal: real-time spectral ocean surface simulation and rendering in OpenGL." />
+  <meta name="keywords" content="CS184, final project, ocean simulation, tessendorf, FFT, OpenGL, GLSL, blender, GUI, water rendering" />
+  <title>CS 184 Final Project Proposal — Tidal Weave</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .mathnote {
+      background: var(--shade);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+    .mathnote p { margin: 0 0 8px; }
+
+    .mathnote p:last-child { margin-bottom: 0; }
+    mjx-container[jax="CHTML"] {
+      max-width: 100%;
+    }
+    mjx-container[jax="CHTML"][display="true"] {
+      display: block;
+      margin: 0.75rem 0 !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.1rem 0 0.2rem;
+    }
+    .mathnote mjx-container[jax="CHTML"][display="true"]:last-child {
+      margin-bottom: 0.2rem !important;
+    }
+    .mathnote mjx-container[jax="CHTML"] mjx-math {
+      font-size: 1.02em;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true,
+        packages: {'[+]': ['ams']}
+      },
+      chtml: {
+        scale: 1.02,
+        matchFontHeight: false
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  <style>
+    @media print {
+      .subgrid, .twocol, .threecol { display: block !important; }
+      .figure { margin: 12px 0 16px !important; }
+      .figure-box { min-height: 0 !important; }
+      .page { width: 100% !important; max-width: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="course-line">CS 184 / 284A</div>
+      <h1 class="title">Tidal Weave: Real-Time Spectral Ocean Surface Simulation and Rendering</h1>
+      <div class="byline">
+        Ellie Ghazaleh — 3035111314 — kristaghazaleh@berkeley.edu<br />
+        Johanna Liu — 3038050576 — johanna.liu@berkeley.edu<br />
+        Ece Eris — 3038827560 — eceeris@berkeley.edu<br />
+        Umesh Gopi — 3040663577 — umesh_gopi@berkeley.edu
+      </div>
+
+      <div class="meta">
+        <div><span class="meta-label">Term:</span> Spring 2026</div>
+		<div><span class="meta-label">Link to webpage:</span> <a href="https://kristaghazaleh.github.io/final_project_proposal-CS184/">kristaghazaleh.github.io/final_project_proposal-CS184/</a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Table of contents">
+    <div class="toc-inner">
+      <div class="toc-title">Contents</div>
+      <a href="#Abstract">Abstract</a>
+      <a href="#Problem">Problem Description</a>
+      <a href="#Goals">Goals &amp; Deliverables</a>
+      <a href="#Part1">Part 1: Geometry</a>
+      <a href="#Part2">Part 2: Shading &amp; Texturing</a>
+      <a href="#Part3">Part 3: Interaction</a>
+      <a href="#Part4">Part 4: Environment &amp; GUI</a>
+      <a href="#Week1">Week 1</a>
+      <a href="#Week2">Week 2</a>
+      <a href="#Week3">Week 3</a>
+      <a href="#Week4">Week 4</a>
+      <a href="#Resources">References</a>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section id="Abstract" class="content">
+      <h2>Abstract</h2>
+      <p>
+        This project proposes a real-time ocean surface simulator and renderer implemented in C++ and OpenGL, with supporting
+        asset creation in Blender and development in Visual Studio. The central goal is to construct a water system that is both
+        technically credible and visually polished: the surface should exhibit large-scale swell motion, medium-scale directional
+        wave structure, and high-frequency optical detail while remaining interactive enough to support parameter exploration
+        through a graphical interface. Our primary technical basis is Jerry Tessendorf’s spectral ocean framework, in which ocean
+        motion is modeled as an evolving displaced surface rather than as a full volumetric fluid. This choice is deliberate. It
+        allows us to focus on the regime most relevant to our target imagery—cinematic open water viewed near the surface—while
+        keeping the project feasible within the final-project schedule.
+      </p>
+      <p>
+        The work is organized around four tightly integrated production tracks. The first track concerns surface geometry and
+        numerical motion: we will generate an ocean mesh, drive it with a spectral or multi-wave displacement model, compute
+        evolving slope and normals, and, if time permits, introduce crest sharpening through choppy horizontal displacement. The
+        second track concerns water appearance: we will implement a GLSL shader that combines Fresnel-weighted reflection, bluish
+        absorption or transmission color, filtered detail textures, and HDR environment response to produce a surface that reads
+        as water rather than as a generic reflective material. The third track concerns physical interaction and local disturbance
+        factors: although the baseline project is focused on open-ocean behavior, we will investigate lightweight mechanisms for
+        click-driven ripples, disturbance emitters, or simple obstacle interaction if the core system stabilizes early enough. The
+        fourth track concerns environment, interface, and evaluation: we will expose numerical controls for the simulation and
+        renderer, construct debug views for normals and displacement, and reserve explicit time for milestone and final media
+        production so that the final presentation quality matches the technical work.
+      </p>
+      <p>
+        The final result we seek is a real-time renderer whose water exhibits the visual qualities associated with convincing ocean
+        imagery: a coherent swell structure, sharper directional ripples at grazing angles, a dark bluish body color, subtle
+        atmospheric softening, and reflected environmental color that contributes to the surface without overwhelming it. This
+        proposal therefore treats the project not as a single shader exercise and not as a pure simulation exercise, but as a
+        carefully structured synthesis of geometry, optics, filtering, interaction design, and presentation. In that sense, the
+        project directly extends the semester’s work in geometry processing, shading, texture sampling, and filtered rendering
+        into a single integrated system.
+      </p>
+
+      <div class="subgrid">
+        <div>
+          <h3>Visual Direction</h3>
+          <p>
+            Our aesthetic target is a low-angle ocean rendering in which the viewer primarily reads the water through its changing
+            surface slope, reflected environment, and bluish subsurface response. The renderer should therefore prioritize broad
+            surface behavior and high-quality optical response over overly dense mesh detail or unnecessary volumetric complexity.
+          </p>
+        </div>
+
+        <figure class="figure">
+          <div class="figure-box">
+            <img src="images/final_target.png" alt="Reference image for the desired final ocean appearance" />
+          </div>
+          <figcaption class="caption">
+            Figure 1. Final visual target for the project: a reflective bluish ocean surface with broad swells, fine
+            grazing-angle detail, and a softened distant horizon.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Problem" class="content">
+      <h2>Problem Description</h2>
+      <p>
+        Convincing ocean rendering is difficult because the phenomenon is inherently split between surface behavior and surface
+        optics. A mathematically animated height field does not automatically look like water, and a visually attractive shader
+        does not by itself produce the large-scale motion, silhouette, and directional organization expected from open ocean
+        waves. Our project addresses this dual requirement directly. We will model the water as a dynamically displaced surface
+        whose motion is governed by a spectral wave formulation, and we will render that surface using view-dependent optical
+        response rather than relying on a static painted texture. This makes the project appropriate for a graphics-course final
+        project: it is grounded in mathematical modeling, but it also requires careful reasoning about rendering, filtering, and
+        interactive presentation.
+      </p>
+      <p>
+        The most important design decision is scope control. We are not attempting to produce a full Navier–Stokes fluid solver,
+        large-scale splashing, or arbitrary topology change. Instead, we are targeting the specific regime that matters to our
+        desired final imagery: real-time open-water motion observed from a cinematic camera position near the surface. Within this
+        regime, a surface-based approach is both more realistic for the schedule and more visually aligned with our goals. It also
+        creates a natural division of labor across geometry, shading, interaction, and interface work without forcing the project
+        into an unmanageable research problem.
+      </p>
+      <p>
+        The semester’s earlier assignments motivate this approach naturally. The project draws on geometric reasoning developed in
+        mesh-based assignments, on filtered texture sampling and mipmapping used in rasterization work, and on shading and normal
+        handling that recur throughout graphics pipelines. Our proposal therefore aims to synthesize those ideas into a single
+        renderer with a coherent technical narrative and a final visual result that is clearly stronger than a simple animated
+        texture or a generic reflective plane.
+      </p>
+
+      <div class="threecol">
+        <figure class="figure">
+          <div class="figure-box">
+            <img src="images/geometry_expectation.png" alt="Reference image for expected geometric wave detail" />
+          </div>
+          <figcaption class="caption">
+            Figure 2. Geometry expectation: layered swell motion and sufficient wave detail to avoid a flat, repeated sine-wave
+            appearance.
+          </figcaption>
+        </figure>
+
+        <figure class="figure">
+          <div class="figure-box">
+            <img src="images/shading_expectation.png" alt="Reference image for expected water shading quality" />
+          </div>
+          <figcaption class="caption">
+            Figure 3. Shading expectation: slope-sensitive highlights and dark body color that reveal structure through reflection
+            rather than through painted albedo alone.
+          </figcaption>
+        </figure>
+
+        <figure class="figure">
+          <div class="figure-box">
+            <img src="images/interaction_expectation.png" alt="Reference image for expected local interaction behavior" />
+          </div>
+          <figcaption class="caption">
+            Figure 4. Interaction expectation: a localized disturbance or obstacle response that demonstrates the renderer can
+            support controlled physical intervention when time permits.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Goals" class="content">
+      <h2>Goals and Deliverables</h2>
+
+      <h3>Primary Research and Production Goals</h3>
+      <p>
+        The first goal of the project is to determine how much of a convincing ocean image must come from the simulated surface
+        itself and how much must come from the shader. Our expectation is that geometry and optics are inseparable: the geometry
+        establishes wave organization, crest motion, and normal orientation, while the shader determines whether those orientations
+        are perceived as water through Fresnel reflection, filtered detail, and controlled absorption. The second goal is to
+        evaluate how far a real-time OpenGL implementation can be pushed within the course timeline without sacrificing visual
+        coherence or code stability. The third goal is to integrate the semester’s earlier ideas—geometry, shading, and filtered
+        texturing—into a single final system with clear presentation value.
+      </p>
+
+      <h3>Baseline Deliverables</h3>
+      <p>
+        The baseline deliverable is a real-time ocean renderer with a stable animated surface, a physically motivated water
+        shader, and a usable control interface. Concretely, this means a displaced ocean mesh driven by a spectral or multi-wave
+        model, computed normals suitable for shading and debugging, a water appearance model that combines reflection, bluish body
+        color, and filtered supporting textures, and a GUI exposing the principal numerical controls for wind, amplitude, chop
+        strength, tint, fog, and playback. The baseline also includes presentation readiness: debug modes, captured screenshots,
+        and a stable interactive application suitable for milestone and final demonstration.
+      </p>
+
+      <h3>Aspirational Deliverables</h3>
+      <p>
+        If the baseline stabilizes early, we will pursue two extensions. The first is geometric refinement through choppy
+        displacement or a related crest-enhancement technique, allowing the surface to move beyond a purely smooth vertical height
+        field. The second is limited local interaction, such as ripple injection, disturbance emitters, or lightweight obstacle
+        response. These are meaningful extensions because they deepen the project technically without altering the central visual
+        direction. They are, however, explicitly secondary to the quality of the main ocean renderer.
+      </p>
+
+      <h3>Evaluation Criteria</h3>
+      <p>
+        We will evaluate the project along three axes. Visual success means that the rendered water plausibly resembles our
+        reference target rather than appearing flat, plastic, or underdeveloped. Technical success means that the renderer
+        maintains stable interactivity under live control while exposing meaningful parameters and debug modes. Presentation
+        success means that the system is sufficiently polished and well-documented to support a strong milestone and final report,
+        with images and short clips captured throughout development rather than assembled at the last minute.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Part1" class="content">
+      <h2>Part 1: Ocean Geometry and Numerical Wave Behavior</h2>
+
+      <h3>From Spectral Data to a Moving Ocean Surface</h3>
+      <div class="mathnote">
+        <p>The spectral surface itself will follow Tessendorf’s Fourier representation</p>
+        \[
+        \begin{aligned}
+        h(\mathbf{x}, t) &= \sum_{\mathbf{k}} \tilde{h}(\mathbf{k}, t)\, e^{i\mathbf{k}\cdot \mathbf{x}},\\
+        \mathbf{k} &= \bigl(\frac{2\pi n}{L_x}, \frac{2\pi m}{L_z}\bigr),\\
+        \mathbf{x} &= \bigl(\frac{nL_x}{N}, \frac{mL_z}{M}\bigr).
+        \end{aligned}
+        \]
+        <p>For deep water, the temporal evolution will be driven by the dispersion relation</p>
+        \[
+        \omega^2(\mathbf{k}) = g\,|\mathbf{k}|.
+        \]
+        <p>We will also compute slope directly in the Fourier domain instead of relying only on finite differences:</p>
+        \[
+        \boldsymbol{\epsilon}(\mathbf{x}, t)=\nabla h(\mathbf{x}, t)=\sum_{\mathbf{k}} i\mathbf{k}\,\tilde{h}(\mathbf{k}, t)\,e^{i\mathbf{k}\cdot \mathbf{x}}.
+        \]
+      </div>
+
+      <p>
+        The first production track concerns the ocean as a geometric object. We will represent the sea as a tiled grid mesh whose
+        vertices are displaced over time by a wave model. The earliest implementation milestone is a stable prototype that proves
+        the rendering path, after which we will replace the simplest motion with the more physically credible spectral
+        formulation. This part therefore includes mesh generation, time-evolving displacement, normal computation, and any
+        crest-sharpening enhancement that remains feasible after the core system is stable.
+      </p>
+
+      <h3>Mesh Construction, Displacement, and Normal Reconstruction</h3>
+      <div class="mathnote">
+        <p>The wave spectrum will be initialized from the Phillips model</p>
+        \[
+        \begin{aligned}
+        P_h(\mathbf{k}) &= A\,\frac{e^{-1/(kL)^2}}{k^4}\,\lvert \hat{\mathbf{k}}\cdot\hat{\mathbf{w}} \rvert^2\,e^{-k^2\ell^2},\\
+        L &= \frac{V^2}{g}.
+        \end{aligned}
+        \]
+        <p>then sampled with Gaussian random amplitudes</p>
+        \[
+        \tilde{h}_0(\mathbf{k}) = \frac{1}{\sqrt{2}}(\xi_r + i\xi_i)\sqrt{P_h(\mathbf{k})}.
+        \]
+        <p>The time-dependent Fourier amplitudes will be evolved as</p>
+        \[
+        \tilde{h}(\mathbf{k}, t)=\tilde{h}_0(\mathbf{k})e^{i\omega(\mathbf{k})t}+\tilde{h}_0^*(-\mathbf{k})e^{-i\omega(\mathbf{k})t}.
+        \]
+        <p>If the choppy extension is implemented, the horizontal displacement field will follow</p>
+        \[
+        \begin{aligned}
+        \mathbf{D}(\mathbf{x}, t) &= \sum_{\mathbf{k}} \bigl(-i\frac{\mathbf{k}}{\lvert \mathbf{k} \rvert}\bigr)\tilde{h}(\mathbf{k}, t)e^{i\mathbf{k}\cdot\mathbf{x}},\\
+        \mathbf{x}' &= \mathbf{x}+\lambda\,\mathbf{D}(\mathbf{x}, t).
+        \end{aligned}
+        \]
+      </div>
+
+      <p>
+        The geometry implementation begins with the construction of the base ocean patch and the update loop that moves it every
+        frame. Once that infrastructure is in place, we will implement a first working multi-wave prototype so that shading and
+        camera work can begin immediately. The main numerical target is then the spectral model itself: initialization of the wave
+        amplitudes, evolution over time, and reconstruction of the displaced surface. From there we will compute slope and normals
+        for use both in the water shader and in debugging modes. If timing allows, we will add choppy horizontal displacement to
+        sharpen crests and improve the perceived realism of the surface.
+      </p>
+
+      <h3>What the Geometry Stage Should Already Show</h3>
+      <div class="mathnote">
+        <p>By this stage, the renderer should already expose the core geometric quantities that later stages depend on:</p>
+        \[
+        \hat{\mathbf{n}}_S(\mathbf{x}, t)=\frac{\hat{\mathbf{y}}-\boldsymbol{\epsilon}(\mathbf{x}, t)}{\sqrt{1+\|\boldsymbol{\epsilon}(\mathbf{x}, t)\|^2}}.
+        \]
+        <p>If we reach the choppy-wave diagnostic stage, we can also monitor folding through the Jacobian</p>
+        \[
+        J(\mathbf{x}) = J_{xx}J_{yy}-J_{xy}J_{yx},
+        \]
+        <p>which provides a physically motivated signal for foam masks or for identifying when the mapped surface begins to overlap.</p>
+      </div>
+
+      <p>
+        By the end of this track, the project should already possess a persuasive animated ocean surface. Even before advanced
+        optical work, the renderer should show broad swell motion, directional structure, and a stable displaced mesh that can be
+        visualized in shaded, wireframe, and normal-debug modes. This part is the numerical backbone of the final project and
+        establishes the geometry on which every later effect depends.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Part2" class="content">
+      <h2>Part 2: Surface Shading, Texturing, and Water Appearance</h2>
+
+      <h3>Why the Surface Still Needs Optics</h3>
+      <div class="mathnote">
+        <p>The optics stage begins with the surface normal inherited from the simulation, since reflectivity depends strongly on local slope:</p>
+        \[
+        \hat{\mathbf{n}}_S(\mathbf{x}, t)=\frac{\hat{\mathbf{y}}-\boldsymbol{\epsilon}(\mathbf{x}, t)}{\sqrt{1+\|\boldsymbol{\epsilon}(\mathbf{x}, t)\|^2}}.
+        \]
+        <p>This gives the shader a direct mathematical bridge from the simulated wave field to the final visual appearance.</p>
+      </div>
+
+      <p>
+        The second production track is responsible for making the ocean read visually as water. The displaced mesh produced in the
+        first track is necessary but not sufficient; without optical response, the result would still resemble a generic animated
+        surface. This track therefore addresses water appearance directly through reflection, color response, filtered texture
+        detail, and environmental lighting.
+      </p>
+
+      <h3>Building the Water Shader and Texture Pipeline</h3>
+      <div class="mathnote">
+        <p>The reflected viewing direction will follow the specular reflection law</p>
+        \[
+        \hat{\mathbf{n}}_r = \hat{\mathbf{n}}_i - 2\hat{\mathbf{n}}_S(\hat{\mathbf{n}}_S\cdot\hat{\mathbf{n}}_i),
+        \]
+        <p>while the refracted direction will be built from Snell’s law as</p>
+        \[
+        \begin{aligned}
+        \hat{\mathbf{n}}_t &= \frac{n_i}{n_t}\hat{\mathbf{n}}_i + \Gamma\,\hat{\mathbf{n}}_S,\\
+        \Gamma &= \frac{n_i}{n_t}(\hat{\mathbf{n}}_i\cdot\hat{\mathbf{n}}_S) \pm \sqrt{1-\bigl(\frac{n_i}{n_t}\bigr)^2\!\lvert \hat{\mathbf{n}}_i\times\hat{\mathbf{n}}_S \rvert^2}.
+        \end{aligned}
+        \]
+        <p>Tessendorf’s Fresnel reflectivity will then be evaluated by</p>
+        \[
+        \begin{aligned}
+        R &= \frac{1}{2}\biggl[\frac{\sin^2(\theta_t-\theta_i)}{\sin^2(\theta_t+\theta_i)} + \frac{\tan^2(\theta_t-\theta_i)}{\tan^2(\theta_t+\theta_i)}\biggr],\\
+        T &= 1-R.
+        \end{aligned}
+        \]
+      </div>
+
+      <p>
+        We will implement a GLSL water shader that responds to the changing surface normals produced by the simulation. The shader
+        will include Fresnel-weighted reflection so that grazing angles brighten naturally, a dark bluish absorption or
+        transmission-style contribution so that lower-reflection regions still read as water, and supporting mipmapped texture
+        assets for high-frequency detail. Blender will be used to author at least one HDR environment and any supporting normal or
+        noise textures we decide to incorporate. Those assets will then be filtered and sampled in OpenGL rather than treated as
+        static painted surfaces. Finally, we will add controlled fog or haze so that the distance response of the scene remains
+        coherent and cinematic.
+      </p>
+
+      <h3>What Will Make the Surface Read as Water</h3>
+      <div class="mathnote">
+        <p>At the shader-composition level, the paper’s simple water model mixes reflected sky and transmitted upwelling light as</p>
+        \[
+        \begin{aligned}
+        C_i &= d\,\bigl(R\,L_{sky} + (1-R)\,L_{upwelling}\bigr) + (1-d)\,L_{air},\\
+        d &= e^{-K_{diffuse}\,\lVert P-E \rVert}.
+        \end{aligned}
+        \]
+        <p>We will adapt this structure to an OpenGL implementation by sampling an HDR environment for the reflected term and combining it with our bluish body color, fog, and filtered detail normals.</p>
+      </div>
+
+      <p>
+        By the end of this track, the renderer should exhibit the qualities that distinguish water from a simple reflective plane:
+        strong grazing-angle highlights, a coherent bluish body tone, variation derived from the surface normal field, and
+        filtered fine detail that enriches the image without replacing the underlying simulation. This part is where the project’s
+        final visual identity will emerge.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Part3" class="content">
+      <h2>Part 3: Physical Interaction, Collision, and Local Disturbance Factors</h2>
+
+      <h3>Adding Local Response Without Turning This Into a Fluid Solver</h3>
+      <div class="mathnote">
+        <p>For local interaction, Tessendorf notes that the full FFT ocean is not ideal, so the interaction subsystem will be grounded in the iWave update</p>
+        \[
+        h(\mathbf{x}, t+\Delta t)=2h(\mathbf{x}, t)-h(\mathbf{x}, t-\Delta t)-g(\Delta t)^2\sqrt{-\nabla^2}\,h(\mathbf{x}, t).
+        \]
+        <p>This gives us an explicit update rule for propagating local disturbances from one frame to the next.</p>
+      </div>
+
+      <p>
+        The third production track addresses the extent to which the ocean can respond to local intervention without becoming a
+        full fluid simulation project. We treat this track as explicitly secondary to the quality of the main ocean renderer, but
+        it remains valuable because it can demonstrate that the system is not merely a passive playback of precomputed motion.
+      </p>
+
+      <h3>Ripple Injection, Disturbance Sources, and Obstacle Tests</h3>
+      <div class="mathnote">
+        <p>If we extend interaction beyond a simple source impulse, the shallow-water modification described in the paper replaces the propagation operator by</p>
+        \[
+        g\,\sqrt{-\nabla^2\,\tanh\!\bigl(\sqrt{-\nabla^2}\,D\bigr)}\,h,
+        \]
+        <p>where \(D\) denotes water depth. For obstacle tests, we will use the paper’s masking idea conceptually: values near \(0\) suppress water motion inside the object, values near \(1\) preserve the wave field outside it, and fractional edge values provide antialiasing at the boundary.</p>
+      </div>
+
+      <p>
+        Our baseline interaction ambition is intentionally modest. The most likely candidate is a click-driven ripple or point
+        disturbance source that injects visible motion into the surface. If the core renderer stabilizes early enough, we will
+        investigate whether this can be extended to disturbance emitters or simple obstacle interaction. The purpose of this work
+        is not to solve a general collision problem, but rather to demonstrate one meaningful local interaction mechanism that can
+        be explained and shown clearly during the final presentation.
+      </p>
+
+      <h3>A Practical Interaction Goal for the Final System</h3>
+      <div class="mathnote">
+        <p>Our interaction goal is intentionally modest: inject a localized source term, observe stable propagation under the iWave step, and keep the interaction mathematically consistent with the surface model rather than introducing a separate ad hoc animation system.</p>
+      </div>
+
+      <p>
+        The output of this track will either be a lightweight but successful local interaction model or a clearly documented
+        stretch subsystem whose implementation status is honest and technically justified. In either case, the project schedule
+        will not be compromised for the sake of interaction features that do not materially improve the final renderer.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Part4" class="content">
+      <h2>Part 4: Environment, GUI, Evaluation, and Deliverable Integration</h2>
+
+      <h3>Turning the Renderer into a Usable, Demonstrable System</h3>
+      <div class="mathnote">
+        <p>The interface layer will expose the numerical parameters that actually control the simulation. In particular, the discretization and sampling knobs correspond directly to</p>
+        \[
+        \begin{aligned}
+        k_x &= \frac{2\pi n}{L_x}, & k_z &= \frac{2\pi m}{L_z},\\
+        dx &= \frac{L_x}{M}, & dz &= \frac{L_z}{N}.
+        \end{aligned}
+        \]
+        <p>so patch size \((L_x,L_z)\) and grid resolution \((M,N)\) are not cosmetic settings; they determine what wavelengths and spatial detail the renderer can actually represent.</p>
+      </div>
+
+      <p>
+        The fourth production track ensures that the project is usable, presentable, and evaluable as a final project rather than
+        as an isolated code experiment. This includes the interface for numerical control, the debug views needed for development,
+        and the disciplined production of screenshots and clips required by the milestone and final deliverables.
+      </p>
+
+      <h3>Numerical Controls, Debug Views, and Media Workflow</h3>
+      <div class="mathnote">
+        <p>The GUI will map directly to the principal physical and rendering parameters in the paper: wind speed \(V\), wind direction \(\hat{\mathbf{w}}\), gravity-driven scale \(L=V^2/g\), small-wave damping length \(\ell\), choppiness \(\lambda\), and time step \(\Delta t\). It will also expose optical controls derived from the Fresnel stage, such as index of refraction, tint weighting, and fog density.</p>
+      </div>
+
+      <p>
+        We will build an ImGui panel exposing the principal simulation and shading parameters, including wind direction, wave
+        amplitude, chop strength, color response, fog density, and playback controls. We will also implement debug views for
+        displacement, normals, wireframe structure, and any local interaction or foam mask that emerges during development. Just
+        as importantly, we will reserve explicit time in the schedule for capture and editing of media assets. This track
+        therefore includes not only application-facing engineering but also the workflow discipline required to support a strong
+        milestone and final presentation.
+      </p>
+
+      <h3>What This Layer Contributes to the Final Project</h3>
+      <div class="mathnote">
+        <p>The main debug views will therefore be mathematically meaningful rather than purely cosmetic: surface height \(h(\mathbf{x}, t)\), slope magnitude \(\|\nabla h\|\), normal direction \(\hat{\mathbf{n}}_S\), displacement \(\mathbf{D}(\mathbf{x}, t)\), reflectivity \(R\), and, if implemented, the fold diagnostic \(J(\mathbf{x})\). These views are what will let us verify that the renderer is behaving according to the underlying model instead of only “looking about right.”</p>
+      </div>
+
+      <p>
+        By the end of this track, the project should be straightforward to demo live, easy to inspect during debugging, and fully
+        documented with a visual record of its development. This is the production layer that protects the project from becoming
+        technically interesting but poorly communicated.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Week1" class="content">
+      <h2>Schedule</h2>
+      <h3>Week 1 — Core Geometry, Application Setup, and First Working Prototype</h3>
+      <p>
+        The first week is devoted to establishing a real working renderer as quickly as possible. On the geometry side, we will
+        construct the ocean patch, build the update loop, and implement an initial multi-wave displacement model so that the
+        application immediately shows animated water rather than an empty framework. On the rendering side, we will create a first
+        shader with controllable color and basic specular response, sufficient to support camera and presentation tests. In
+        parallel, we will set up the Visual Studio project, OpenGL boilerplate, shader loading, parameter containers, and an
+        initial ImGui panel. By the end of the week, the application should already be runnable and interactive, even if the
+        visual quality remains provisional.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Week2" class="content">
+      <h3>Week 2 — Real Ocean Motion, Surface Filtering, and Milestone Readiness</h3>
+      <p>
+        The second week is dedicated to replacing the simplest prototype motion with the main wave pipeline. This includes
+        spectral initialization and time evolution, integration of the resulting displacement into the renderer, and the first
+        convincing normal-driven shading pass. We will also introduce the first real environment response through an HDR asset
+        authored in Blender and begin integrating filtered supporting textures, such as detail normals or noise. During this same
+        week, the GUI will expand to expose the principal numerical controls for the simulation and appearance. Because the
+        milestone sits so close to the development schedule, week two also reserves time for screenshot capture, milestone
+        planning, and the identification of what the application will be ready to demonstrate.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Week3" class="content">
+      <h3>Week 3 — Choppy Refinement, Local Interaction, and Presentation-Quality Look Development</h3>
+      <p>
+        The third week transforms the renderer from technically functional to visually persuasive. If the numerical foundation is
+        stable, we will introduce choppy displacement or a related crest-enhancement strategy and tune the simulation at the
+        parameter ranges we expect to use in the final presentation. Shading work during this week focuses on final visual
+        credibility: bluish water response, HDR reflection balance, haze, filtered detail, and exposure tuning. This is also the
+        appropriate window for local interaction work, since by this point we will know whether the baseline renderer is stable
+        enough to support it. If interaction remains unreliable, we will intentionally freeze it and redirect the remaining time
+        toward visual polish and documentation.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Week4" class="content">
+      <h3>Week 4 — Integration Freeze, Video and Presentation Production, and Final Deliverables</h3>
+      <p>
+        The final week is reserved primarily for stabilization and communication. We will limit technical changes to bug fixes,
+        integration cleanup, and small appearance refinements, while the larger share of time is dedicated to preparing the final
+        report, final video, screenshots, and presentation materials. This week exists to protect the project from the common
+        failure mode in which the renderer is promising but the final presentation is rushed. By scheduling media production
+        explicitly rather than treating it as an afterthought, we ensure that the final output demonstrates the project clearly and
+        professionally. At the end of week four, the project should be feature-frozen, presentation-safe, and ready for final
+        submission.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+
+    <section id="Resources" class="content">
+      <h2>References</h2>
+
+      <h3>Primary Reference</h3>
+      <p>
+        Jerry Tessendorf. <em>Simulating Ocean Water</em>. This paper is the project’s central conceptual reference for both the
+        spectral wave formulation and the optical treatment of the water surface. It informs our choices in surface
+        representation, displacement strategy, slope- and normal-driven appearance, and the separation between surface motion and
+        surface optics.
+      </p>
+
+      <h3>Implementation Platform</h3>
+      <p>
+        The project will be implemented in C++ with OpenGL and GLSL in Visual Studio, with Blender used to author HDR
+        environmental assets and any supporting texture inputs required by the renderer. These are implementation tools rather than
+        conceptual references, but they define the practical environment in which the project will be built.
+      </p>
+
+      <div class="divider"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="fineprint">
+        Ellie Ghazaleh · 3035111314 · kristaghazaleh@berkeley.edu &nbsp;&nbsp;|&nbsp;&nbsp;
+        Johanna Liu · 3038050576 · johanna.liu@berkeley.edu &nbsp;&nbsp;|&nbsp;&nbsp;
+        Ece Eris · 3038827560 · eceeris@berkeley.edu &nbsp;&nbsp;|&nbsp;&nbsp;
+        Umesh Gopi · 3040663577 · umesh_gopi@berkeley.edu
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

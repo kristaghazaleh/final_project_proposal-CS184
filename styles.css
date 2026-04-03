@@ -1,0 +1,374 @@
+/* CS184 HW1 Writeup — black & white “paper/resume” style */ 
+
+:root {
+  --ink: #111;
+  --muted: #555;
+  --light: #777;
+  --paper: #fff;
+  --rule: #d6d6d6;
+  --shade: #f6f6f6;
+
+  --serif: "EB Garamond", Garamond, Georgia, "Times New Roman", serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Base */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  line-height: 1.55;
+  font-size: 18px;
+}
+
+/* Make media behave nicely everywhere (screen + print) */
+img, svg, canvas, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Header */
+.hero {
+  border-bottom: 1px solid var(--rule);
+  padding: 44px 0 22px;
+}
+.hero-inner {
+  width: min(900px, 92vw);
+  margin: 0 auto;
+}
+.course-line {
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 16px;
+  text-transform: uppercase;
+}
+.title {
+  margin: 6px 0 4px;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.byline {
+  font-size: 12px; /* tiny per your request */
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.meta {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.meta-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* TOC */
+.toc {
+  border-bottom: 1px solid var(--rule);
+  padding: 16px 0 18px;
+}
+.toc-inner {
+  width: min(900px, 92vw);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: baseline;
+}
+.toc-title {
+  font-weight: 700;
+  margin-right: 10px;
+}
+.toc a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.toc a:hover {
+  border-bottom-color: var(--ink);
+}
+
+/* Page layout */
+.page {
+  width: min(900px, 92vw);
+  margin: 0 auto;
+  padding: 28px 0 54px;
+}
+
+.content {
+  padding: 6px 0 10px;
+}
+
+h2 {
+  margin: 18px 0 10px;
+  font-size: 28px;
+  line-height: 1.2;
+}
+h3 {
+  margin: 14px 0 6px;
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+/* Paragraphs */
+p { margin: 10px 0; }
+.placeholder {
+  color: var(--muted);
+  background: var(--shade);
+  border: 1px solid var(--rule);
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+.placeholder-inline { color: var(--muted); }
+
+/* Lists */
+.bullets {
+  margin: 8px 0 0 22px;
+}
+.bullets li { margin: 6px 0; }
+.label { font-weight: 700; }
+
+/* Code */
+.code {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fafafa;
+  border: 1px solid var(--rule);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* Figures */
+.figure {
+  margin: 12px 0 0;
+}
+
+/* If you place an <img> inside .figure-box, this ensures it scales and stays contained */
+.figure-box {
+  border: 1px solid var(--rule);
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  padding: 10px;            /* breathing room */
+}
+.figure-box img {
+  max-width: 100%;
+  max-height: 70vh;         /* screen */
+  height: auto;
+  object-fit: contain;
+}
+.figure-placeholder {
+  color: var(--light);
+  font-size: 16px;
+  padding: 18px;
+  text-align: center;
+}
+.caption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.caption code {
+  font-family: var(--mono);
+  font-size: 0.95em;
+}
+
+/* Grids */
+.twocol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.threecol {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.subgrid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+  align-items: start;
+  margin-top: 6px;
+}
+
+/* NEW: 8-up grid (2 columns × 4 rows naturally) */
+.eightgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+/* Slightly tighter figure boxes in the 8-up grid so they pack nicely */
+.eightgrid .figure { margin-top: 0; }
+.eightgrid .figure-box { min-height: 0; padding: 8px; }
+.eightgrid .caption { margin-top: 6px; font-size: 14px; line-height: 1.2; }
+
+@media (max-width: 860px) {
+  .twocol { grid-template-columns: 1fr; }
+  .threecol { grid-template-columns: 1fr; }
+  .subgrid { grid-template-columns: 1fr; }
+  .eightgrid { grid-template-columns: 1fr; }
+  .title { font-size: 36px; }
+}
+
+/* Divider */
+.divider {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 24px 0 0;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--rule);
+  padding: 18px 0 34px;
+}
+.footer-inner {
+  width: min(900px, 92vw);
+  margin: 0 auto;
+}
+.fineprint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Print */
+@media print {
+  @page {
+    margin: 0.6in;
+  }
+
+  body {
+    font-size: 12pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .hero-inner,
+  .toc-inner,
+  .footer-inner,
+  .page {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .page { padding: 16px 0 0 !important; }
+
+  .toc { display: none; }
+  .hero { padding-top: 24px; }
+  .title { font-size: 28pt; }
+
+  .placeholder { background: #fff; }
+  a { color: var(--ink); text-decoration: none; }
+
+  .figure, .figure-box, .code { break-inside: avoid; page-break-inside: avoid; }
+
+  .figure-box { min-height: 0 !important; }
+  .figure-box img { max-height: 6.5in !important; }
+
+  /* Keep twocol in print */
+  .twocol {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep threecol in print */
+  .threecol {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .threecol .figure-box {
+    padding: 4px !important;
+    border-radius: 6px !important;
+  }
+
+  .threecol .figure-box img {
+    max-height: 2.35in !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .threecol .caption {
+    font-size: 10.5pt !important;
+    line-height: 1.2 !important;
+  }
+
+  /* NEW: 8-up Part 1 grid — keep all 8 together */
+  .eightgrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .eightgrid .figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .eightgrid .figure-box {
+    padding: 4px !important;
+    border-radius: 6px !important;
+  }
+  /* Critical: cap height so 8 images fit on one printed page */
+  .eightgrid .figure-box img {
+    max-height: 1.55in !important;  /* tweak 1.45–1.75in if needed */
+    width: 100% !important;
+    height: auto !important;
+  }
+  .eightgrid .caption {
+    margin-top: 4px !important;
+    font-size: 10pt !important;
+    line-height: 1.15 !important;
+  }
+}
+
+/* MathJax display formatting */
+.mathnote mjx-container[jax="CHTML"][display="true"],
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  margin: 0.75rem 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+
+.mathnote mjx-container[jax="CHTML"] mjx-math,
+mjx-container[jax="CHTML"] mjx-math {
+  font-size: 1.02em;
+}
+
+.mathnote {
+  overflow-x: auto;
+}
